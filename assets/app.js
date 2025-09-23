@@ -56,22 +56,40 @@ function renderBooks(filter=""){
   books.forEach(b => {
     const el = document.createElement("div");
     el.className = "book" + (b.id===state.currentBookId ? " active": "");
-    el.onclick = ()=>{ state.currentBookId=b.id; state.activeTag=null; noteSearch.value=""; renderAll(); };
+
     el.innerHTML = `
-      <div class="book-cover">${(b.title?.[0]||"书").toUpperCase()}</div>
-      <div>
-        <div><strong>${escapeHTML(b.title)}</strong></div>
-        <div class="meta">${escapeHTML(b.author||"")} · ${b.year||""}</div>
-        <div class="tags">${(b.tags||[]).map(t=>`<span class="chip" data-tag="${t}">#${escapeHTML(t)}</span>`).join("")}</div>
+      <div class="row">
+        <div class="book-cover">${(b.title?.[0]||"书").toUpperCase()}</div>
+        <div style="min-width:0">
+          <div><strong>${escapeHTML(b.title)}</strong></div>
+          <div class="meta">${escapeHTML(b.author||"")} · ${b.year||""}</div>
+          <div class="tags">${(b.tags||[]).map(t=>`<span class="chip" data-tag="${t}">#${escapeHTML(t)}</span>`).join("")}</div>
+        </div>
+        <div class="actions">
+          <button class="icon-btn edit" title="编辑">✎</button>
+          <button class="icon-btn del"  title="删除">🗑</button>
+        </div>
       </div>`;
+
+    // 卡片点击切换当前书（避免点击按钮/标签时触发）
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest(".icon-btn") || e.target.classList.contains("chip")) return;
+      state.currentBookId=b.id; state.activeTag=null; noteSearch.value=""; renderAll();
+    });
+
+    // 标签筛选
+    el.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      state.activeTag = ch.dataset.tag;
+      renderNotes();
+    }));
+
+    // 编辑 & 删除
+    el.querySelector(".edit").addEventListener("click", (e)=>{ e.stopPropagation(); editBook(b.id); });
+    el.querySelector(".del").addEventListener("click",  (e)=>{ e.stopPropagation(); deleteBook(b.id); });
+
     bookList.appendChild(el);
   });
-  // 标签筛选绑定
-  bookList.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", (e)=>{
-    e.stopPropagation();
-    state.activeTag = ch.dataset.tag;
-    renderNotes();
-  }));
 }
 
 function renderNotes(){
@@ -157,6 +175,33 @@ document.getElementById("toggleTheme").addEventListener("click", ()=>{
   const isLight = document.documentElement.classList.toggle("light");
   localStorage.setItem(THEME_KEY, isLight ? "light" : "dark");
 });
+
+/* ===== 编辑 / 删除书本 ===== */
+function editBook(bookId){
+  const b = state.data.find(x=>x.id===bookId);
+  if(!b) return;
+  const title = prompt("书名：", b.title || "") ?? b.title;
+  if(!title) return; // 保持必填
+  const author = prompt("作者：", b.author || "") ?? b.author;
+  const yearIn = prompt("年份（数字，可留空）：", b.year ?? "") ?? b.year;
+  const year = yearIn ? parseInt(yearIn, 10) : b.year;
+  const tagsIn = prompt("标签（用逗号分隔）：", (b.tags||[]).join(",")) ?? (b.tags||[]).join(",");
+  const tags = tagsIn ? tagsIn.split(",").map(s=>s.trim()).filter(Boolean) : [];
+  b.title = title; b.author = author; b.year = year; b.tags = tags;
+  saveData(); renderAll();
+}
+
+function deleteBook(bookId){
+  const b = state.data.find(x=>x.id===bookId);
+  if(!b) return;
+  if(!confirm(`确定删除《${b.title}》及其所有笔记吗？此操作不可撤销。`)) return;
+  const idx = state.data.findIndex(x=>x.id===bookId);
+  if(idx >= 0){ state.data.splice(idx,1); }
+  if(state.currentBookId === bookId){
+    state.currentBookId = state.data[0]?.id || null;
+  }
+  saveData(); renderAll();
+}
 
 /* ===== 工具函数 ===== */
 function loadData(){
