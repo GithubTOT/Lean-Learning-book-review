@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我的读书笔记 · Reading Notes</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="app">
+  <aside>
+    <header class="header">
+      <div>
+        <div class="title">📚 我的读书笔记</div>
+        <div class="muted">支持多本书 · 可搜索 · 可导出</div>
+      </div>
+      <button id="toggleTheme" class="btn" title="切换主题">🌓</button>
+    </header>
+
+    <div class="search">
+      <input id="bookSearch" placeholder="搜索书名/作者…" />
+      <button id="newBookBtn" class="btn">＋ 新书</button>
+    </div>
+
+    <div class="book-list" id="bookList"></div>
+    <div class="muted tip">💡 点击书目切换内容；点击标签可筛选。</div>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <div class="filters">
+        <input id="noteSearch" placeholder="在当前书中搜索笔记…" class="input"/>
+        <div id="activeTag" class="chip hidden"></div>
+      </div>
+      <div>
+        <button id="importBtn" class="btn">导入JSON</button>
+        <button id="exportBtn" class="btn">导出JSON</button>
+        <button id="printBtn"  class="btn">打印/导出PDF</button>
+      </div>
+    </div>
+
+    <section id="notes"></section>
+    <div class="counter" id="countInfo"></div>
+    <div class="footer">单文件数据保存在浏览器本地存储 · 可导出JSON备份 · 适配打印</div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
