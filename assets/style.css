@@ -96,3 +96,17 @@ details.note[open]{outline:1px dashed var(--accent-2);}
   body{background:#fff; color:#000}
   .note{page-break-inside:avoid}
 }
+
+/* === note actions === */
+.note-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.note-actions{ display:flex; gap:8px; }
+.icon-btn{
+  border:1px solid var(--border);
+  background:var(--panel);
+  color:var(--text);
+  padding:4px 8px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:12px;
+}
+.icon-btn:hover{ filter:brightness(1.08) }

@@ -37,6 +37,17 @@ const state = {
 if(!state.data.length){ state.data = demoData; saveData(); }
 state.currentBookId = state.data[0]?.id;
 
+/* ===== Backfill IDs for legacy notes ===== */
+function backfillNoteIds(){
+  state.data.forEach(b=>{
+    if(!Array.isArray(b.notes)) b.notes = [];
+    b.notes.forEach(n=>{ if(!n.id){ n.id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); } });
+  });
+  saveData();
+}
+backfillNoteIds();
+
+
 /* ===== DOM ===== */
 const bookList = document.getElementById("bookList");
 const notesEl  = document.getElementById("notes");
@@ -95,6 +106,49 @@ function renderBooks(filter=""){
 function renderNotes(){
   const book = state.data.find(b=>b.id===state.currentBookId);
   if(!book){ notesEl.innerHTML="<div class='muted'>请选择或新建一本书。</div>"; return; }
+  const term = noteSearch.value.trim().toLowerCase();
+  notesEl.innerHTML="";
+  let count=0;
+  (book.notes||[]).forEach((n,idx) => {
+    const text = `${n.title} ${(n.tags||[]).join(" ")} ${n.text}`.toLowerCase();
+    const tagOk = !state.activeTag || (n.tags||[]).includes(state.activeTag);
+    if( (!term || text.includes(term)) && tagOk){
+      const el = document.createElement("details");
+      el.className="note"; el.open = idx<2; // 前两个默认展开
+      el.innerHTML = `
+        <summary>
+          <div class="note-header">
+            <h3>${escapeHTML(n.title||"未命名笔记")}</h3>
+            <div class="note-actions">
+              <button class="icon-btn n-edit" title="编辑笔记">✎</button>
+              <button class="icon-btn n-del" title="删除笔记">🗑</button>
+            </div>
+          </div>
+        </summary>
+        <div class="meta">
+          ${(n.tags||[]).map(t=>`<span class="chip" data-tag="${t}">#${escapeHTML(t)}</span>`).join("")}
+          <span>✍️ 正文可直接在下方编辑</span>
+        </div>
+        <div class="content" contenteditable="true">${escapeHTML(n.text||"")}</div>`;
+      // 标签点击
+      el.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", (e)=>{
+        e.stopPropagation(); state.activeTag = ch.textContent.replace("#",""); renderNotes();
+      }));
+      // 保存正文编辑
+      el.querySelector(".content").addEventListener("input", (e)=>{
+        n.text = e.target.innerText; saveData();
+      });
+      // 绑定编辑/删除按钮
+      el.querySelector(".n-edit").addEventListener("click", (e)=>{ e.stopPropagation(); editNote(idx); });
+      el.querySelector(".n-del").addEventListener("click", (e)=>{ e.stopPropagation(); deleteNote(idx); });
+      notesEl.appendChild(el);
+      count++;
+    }
+  });
+  countInfo.textContent = `共 ${book.notes?.length||0} 条笔记 · 当前显示 ${count} 条${state.activeTag?` · 标签 #${state.activeTag}`:""}`;
+  if(state.activeTag){ activeTagEl.textContent = `#${state.activeTag} ✕`; activeTagEl.classList.remove("hidden"); }
+  else { activeTagEl.classList.add("hidden"); }
+}
   const term = noteSearch.value.trim().toLowerCase();
   notesEl.innerHTML="";
   let count=0;
@@ -171,6 +225,12 @@ document.getElementById("printBtn").addEventListener("click", ()=>{
   window.print();
 });
 
+
+const newNoteBtn = document.getElementById("newNoteBtn");
+if(newNoteBtn){
+  newNoteBtn.addEventListener("click", ()=> addNote());
+}
+
 document.getElementById("toggleTheme").addEventListener("click", ()=>{
   const isLight = document.documentElement.classList.toggle("light");
   localStorage.setItem(THEME_KEY, isLight ? "light" : "dark");
@@ -229,4 +289,48 @@ function triggerDownload(blob, filename){
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
+}
+
+
+/* ===== 笔记：新增 / 编辑 / 删除 ===== */
+function addNote(){
+  const book = state.data.find(b=>b.id===state.currentBookId);
+  if(!book){ alert("请先新建或选择一本书"); return; }
+  const title = prompt("笔记标题：");
+  if(!title) return;
+  const tagsIn = prompt("标签（用逗号分隔，可留空）：","");
+  const text = prompt("笔记内容（支持换行，保存后可在页面内继续编辑）：","") || "";
+  const note = {
+    id: (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)),
+    title, text,
+    tags: tagsIn ? tagsIn.split(",").map(s=>s.trim()).filter(Boolean) : []
+  };
+  book.notes = book.notes || [];
+  book.notes.unshift(note);
+  saveData(); renderNotes();
+}
+
+function editNote(noteIndex){
+  const book = state.data.find(b=>b.id===state.currentBookId);
+  if(!book) return;
+  const n = book.notes[noteIndex];
+  if(!n) return;
+  const title = prompt("笔记标题：", n.title || "") ?? n.title;
+  if(!title) return;
+  const tagsIn = prompt("标签（逗号分隔）：", (n.tags||[]).join(",")) ?? (n.tags||[]).join(",");
+  const text = prompt("笔记内容：", n.text || "") ?? n.text;
+  n.title = title;
+  n.tags = tagsIn ? tagsIn.split(",").map(s=>s.trim()).filter(Boolean) : [];
+  n.text = text;
+  saveData(); renderNotes();
+}
+
+function deleteNote(noteIndex){
+  const book = state.data.find(b=>b.id===state.currentBookId);
+  if(!book) return;
+  const n = book.notes[noteIndex];
+  if(!n) return;
+  if(!confirm(`确定删除笔记《${n.title||"未命名"}》吗？`)) return;
+  book.notes.splice(noteIndex,1);
+  saveData(); renderNotes();
 }
