@@ -1,0 +1,24 @@
+title: 读书笔记 | Reading Notes
+description: 把每一本书的要点写清楚、写简洁、写成习惯。
+theme: minima
+# 如果你的 Pages 是自定义域名，请把 url 改成你的域名；否则保持为空。
+url: 
+baseurl: 
+timezone: Pacific/Auckland
+lang: zh-CN
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+author:
+  name: TOT
+  email: 
+
+# 可选：自定义永久链接格式 /posts/2025/11/slug/
+permalink: /posts/:year/:month/:title/
+
+minima:
+  skin: classic
+  social_links:
+    github: E5bab7
+    rss: rss
